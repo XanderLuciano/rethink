@@ -2,6 +2,7 @@ import { WebSocketExpress, ExtendedWebSocket } from 'websocket-express'
 
 import path from 'path'
 import { fileURLToPath } from 'url'
+import * as fs from 'node:fs'
 import log from '@/util/logging'
 
 import HA_bridge from '@/cloud/ha_bridge'
@@ -153,7 +154,20 @@ export function app(ha: HA_bridge, manager: DeviceManager, bridge: Bridge | unde
     }
 
     // device monitoring — cache meta so monitor works even when device is offline
-    const metaCache: Record<string, Metadata> = {}
+    const metaCachePath = path.join(currentDir, '..', 'meta-cache.json')
+    let metaCache: Record<string, Metadata> = {}
+    try {
+        metaCache = JSON.parse(fs.readFileSync(metaCachePath, 'utf-8'))
+    } catch {
+        /* first run */
+    }
+
+    function saveMetaCache() {
+        try {
+            fs.writeFileSync(metaCachePath, JSON.stringify(metaCache))
+        } catch {}
+    }
+
     // Ring buffer of recent packets per device, sent on connect for instant history
     const packetBuffer: Record<string, { dir: string; hex: string }[]> = {}
     const MAX_BUFFER = 50
@@ -216,7 +230,10 @@ export function app(ha: HA_bridge, manager: DeviceManager, bridge: Bridge | unde
                 const dev = manager.allDevices[id]
 
                 // Cache meta when device is online
-                if (dev && dev.meta) metaCache[id] = dev.meta
+                if (dev && dev.meta) {
+                    metaCache[id] = dev.meta
+                    saveMetaCache()
+                }
 
                 if (dev !== device) {
                     device?.removeListener('data', onDeviceRx)
