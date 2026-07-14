@@ -163,6 +163,17 @@
             <div class="raw-log" id="raw_log">
                 <div style="color: #999; text-align: center; padding: 20px">Waiting for device data...</div>
             </div>
+            <div class="row" style="margin-bottom: 0">
+                <div class="input-field col s9 m10">
+                    <input id="cmd_input" type="text" placeholder="aa0ef043..." />
+                    <label for="cmd_input">Send hex command to device</label>
+                </div>
+                <div class="input-field col s3 m2">
+                    <button class="btn waves-effect waves-light" id="btn_send" onclick="sendCmd()" disabled>
+                        Send <i class="material-icons right">send</i>
+                    </button>
+                </div>
+            </div>
         </div>
 
         <script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/js/materialize.min.js"></script>

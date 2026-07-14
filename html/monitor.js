@@ -8,7 +8,6 @@ const FRIENDLY = {
     N15: 'Dishwasher',
 }
 
-// Control commands for known devices
 const DEVICE_CMDS = {
     WMVEL2137: {
         fan_on: 'aa0ef0432204010100808080c6bb',
@@ -22,6 +21,7 @@ let device = {
     status: 'connecting',
     model: '',
     deviceType: '',
+    swVer: '',
     fan: false,
     light: false,
     rssi: null,
@@ -29,7 +29,7 @@ let device = {
     packetCount: 0,
 }
 let metaCache = null
-let ws, reconnectTimer
+let ws, reconnectTimer, seenTimer
 
 const $ = (id) => document.getElementById(id)
 const ts = () => new Date().toLocaleTimeString()
@@ -37,10 +37,8 @@ const ts = () => new Date().toLocaleTimeString()
 // ── Packet parsing ───────────────────────────────────────────────────
 function parseState(hex) {
     const lower = hex.toLowerCase()
-    // Microwave AA62 status: byte at offset 7 in hex = '0'/'1' for fan
     if (hex.startsWith('aa62')) {
         const fan = hex.length > 14 ? hex[14] === '3' && hex[15] === '1' : false
-        // Light: look for 5310 pattern in second block (after second ff030d)
         const ffIdx = lower.lastIndexOf('ff030d')
         let light = false
         if (ffIdx > 0) {
@@ -64,6 +62,7 @@ function update() {
 
     $('info_model').innerText = device.model || (metaCache ? metaCache.modelId : '...')
     $('info_type').innerText = device.deviceType || (metaCache ? metaCache.deviceType : '...') || '?'
+    $('info_fw').innerText = device.swVer || (metaCache ? metaCache.swVersion : '') || '?'
     $('info_status').innerHTML =
         device.status === 'online'
             ? '<span class="green-text">● Online</span>'
@@ -72,44 +71,41 @@ function update() {
               : '<span class="red-text">○ Offline</span>'
     $('info_rssi').innerText = device.rssi != null ? device.rssi + ' dBm' : '...'
     $('info_packets').innerText = device.packetCount
+    updateSeen()
+
+    updateCards()
+    updateControls()
+}
+
+function updateSeen() {
     if (device.lastSeen) {
         const ago = Math.round((Date.now() - device.lastSeen) / 1000)
         $('info_seen').innerText = ago < 60 ? ago + 's ago' : Math.round(ago / 60) + 'm ago'
     } else {
         $('info_seen').innerText = '---'
     }
-
-    updateCards()
-    updateControls()
 }
 
 function updateCards() {
     const isMicrowave = device.model === 'WMVEL2137' || (metaCache && metaCache.modelId === 'WMVEL2137')
-
     if (isMicrowave) {
         $('status_cards').innerHTML = `
-            <div class="col s6 m3">
-                <div class="state-card">
-                    <div class="card-header"><span class="material-icons">air</span> Vent Fan</div>
-                    <div class="card-value">${device.fan ? 'ON' : 'OFF'}</div>
-                    <div class="card-sub">${device.fan ? 'Running' : 'Stopped'}</div>
-                </div>
-            </div>
-            <div class="col s6 m3">
-                <div class="state-card">
-                    <div class="card-header"><span class="material-icons">light_mode</span> Light</div>
-                    <div class="card-value">${device.light ? 'ON' : 'OFF'}</div>
-                    <div class="card-sub">${device.light ? 'Illuminated' : 'Dark'}</div>
-                </div>
-            </div>`
+            <div class="col s6 m3"><div class="state-card">
+                <div class="card-header"><span class="material-icons">air</span> Vent Fan</div>
+                <div class="card-value">${device.fan ? 'ON' : 'OFF'}</div>
+                <div class="card-sub">${device.fan ? 'Running' : 'Stopped'}</div>
+            </div></div>
+            <div class="col s6 m3"><div class="state-card">
+                <div class="card-header"><span class="material-icons">light_mode</span> Light</div>
+                <div class="card-value">${device.light ? 'ON' : 'OFF'}</div>
+                <div class="card-sub">${device.light ? 'Illuminated' : 'Dark'}</div>
+            </div></div>`
     } else {
         $('status_cards').innerHTML = `
-            <div class="col s12">
-                <div class="state-card">
-                    <div class="card-header"><span class="material-icons">devices</span> Device streaming raw data to HA</div>
-                    <div class="card-sub">Unknown model "${device.model || '?'}" — generic packet capture active. See Raw Packets below for TLV hex.</div>
-                </div>
-            </div>`
+            <div class="col s12"><div class="state-card">
+                <div class="card-header"><span class="material-icons">devices</span> Device streaming raw data to HA</div>
+                <div class="card-sub">Unknown model "${device.model || '?'}" — generic packet capture active. Raw hex below.</div>
+            </div></div>`
     }
 }
 
@@ -133,6 +129,9 @@ function updateControls() {
                     id="btn_light" ${!online ? 'disabled' : ''}
                     onclick="toggle('light')">Light: ${device.light ? 'ON' : 'OFF'}</button>
         </div>`
+
+    // Enable/disable send button
+    $('btn_send').disabled = !online
 }
 
 function toggle(ctrl) {
@@ -146,17 +145,25 @@ function toggle(ctrl) {
     update()
 }
 
+function sendCmd() {
+    const hex = $('cmd_input').value.trim()
+    if (!hex || !ws || ws.readyState !== WebSocket.OPEN) return
+    ws.send(JSON.stringify({ sendToDevice: hex }))
+    $('cmd_input').value = ''
+    // Allow enter key too
+}
+
+// ── Raw packet logging ───────────────────────────────────────────────
 function pushRaw(dir, hex) {
     device.packetCount++
     const div = document.createElement('div')
     div.className = `msg ${dir}`
-    div.innerHTML = `<span class="time">${ts()}</span><span class="dir">${dir === 'rx' ? '◀' : '▶'}</span>${hex}`
+    div.innerHTML = `<span class="time">${ts()}</span><span class="dir">${dir === 'rx' ? '◀ DEV' : '▶ CLOUD'}</span>${hex}`
     const log = $('raw_log')
     if (log.querySelector('div[style]')) log.innerHTML = '' // clear placeholder
     log.appendChild(div)
     log.scrollTop = log.scrollHeight
     $('raw_count').innerText = device.packetCount
-    // Trim old messages
     while (log.children.length > 200) log.firstChild.remove()
 }
 
@@ -190,6 +197,7 @@ function connect() {
             metaCache = json.meta
             device.model = json.meta.modelId || ''
             device.deviceType = json.meta.deviceType || ''
+            device.swVer = json.meta.swVersion || ''
             update()
         }
 
@@ -198,19 +206,24 @@ function connect() {
             if (json.rssi != null) device.rssi = json.rssi
             device.lastSeen = Date.now()
 
-            // Parse state from raw hex
             const state = parseState(json.rx)
-            if (Object.keys(state).length) {
-                Object.assign(device, state)
-                update()
-            }
+            if (Object.keys(state).length) Object.assign(device, state)
+            update() // always refresh — RSSI/packets/seen change every packet
         }
 
         if (json.tx) {
             pushRaw('tx', json.tx)
+            update()
         }
     }
+
+    // Refresh "last seen" counter periodically
+    clearInterval(seenTimer)
+    seenTimer = setInterval(updateSeen, 5000)
 }
 
 // ── Init ─────────────────────────────────────────────────────────────
+$('cmd_input').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') sendCmd()
+})
 connect()
