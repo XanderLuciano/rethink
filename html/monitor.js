@@ -23,8 +23,9 @@ let device = {
     deviceType: '',
     swVer: '',
     fan: false,
+    fanLevel: 'off',
     light: false,
-    lightLevel: null, // 'low' | 'high' | null
+    lightLevel: null,
     rssi: null,
     lastSeen: null,
     packetCount: 0,
@@ -49,9 +50,14 @@ function parseState(hex) {
                 const m = blk.match(/53([0-9a-f]{2})/)
                 if (m) {
                     const val = parseInt(m[1], 16)
-                    state.fan = !!(val & 0x01)
-                    state.light = !!(val & 0x10) || !!(val & 0x20)
-                    state.lightLevel = val & 0x20 ? 'high' : val & 0x10 ? 'low' : null
+                    // Lower nibble: fan level (0=off, 1=low, 2=med, 3=high, 4=turbo)
+                    // Upper nibble: light (0=off, 1=low, 2=high)
+                    const fanVal = val & 0x0f
+                    const lightVal = (val >> 4) & 0x0f
+                    state.fan = fanVal > 0
+                    state.fanLevel = ['off', 'low', 'medium', 'high', 'turbo'][fanVal] || 'off'
+                    state.light = lightVal > 0
+                    state.lightLevel = lightVal === 2 ? 'high' : lightVal === 1 ? 'low' : null
                 }
             }
         }
@@ -97,8 +103,8 @@ function updateCards() {
         $('status_cards').innerHTML = `
             <div class="col s6 m3"><div class="state-card">
                 <div class="card-header"><span class="material-icons">air</span> Vent Fan</div>
-                <div class="card-value">${device.fan ? 'ON' : 'OFF'}</div>
-                <div class="card-sub">${device.fan ? 'Running' : 'Stopped'}</div>
+                <div class="card-value">${device.fan ? device.fanLevel.toUpperCase() : 'OFF'}</div>
+                <div class="card-sub">${device.fan ? 'Speed ' + device.fanLevel : 'Stopped'}</div>
             </div></div>
             <div class="col s6 m3"><div class="state-card">
                 <div class="card-header"><span class="material-icons">light_mode</span> Light</div>
@@ -127,7 +133,7 @@ function updateControls() {
         <div class="col s6 m3">
             <button class="toggle-btn ${device.fan ? 'on' : 'off'} waves-effect"
                     id="btn_fan" ${!online ? 'disabled' : ''}
-                    onclick="toggle('fan')">Fan: ${device.fan ? 'ON' : 'OFF'}</button>
+                    onclick="toggle('fan')">Fan: ${device.fan ? device.fanLevel.toUpperCase() : 'OFF'}</button>
         </div>
         <div class="col s6 m3">
             <button class="toggle-btn ${device.light ? 'on' : 'off'} waves-effect"
@@ -146,14 +152,18 @@ function toggle(ctrl) {
     if (ctrl === 'light') {
         // Cycle: off → low → high → off
         if (!device.light) {
-            // off → low: send light_on, device will respond with low
             ws.send(JSON.stringify({ sendToDevice: cmds.light_on }))
         } else if (device.lightLevel === 'low') {
-            // low → high: send light_on again, device cycles up
             ws.send(JSON.stringify({ sendToDevice: cmds.light_on }))
         } else {
-            // high → off
             ws.send(JSON.stringify({ sendToDevice: cmds.light_off }))
+        }
+    } else if (ctrl === 'fan') {
+        // Cycle: off → low → medium → high → turbo → off
+        if (device.fanLevel === 'turbo') {
+            ws.send(JSON.stringify({ sendToDevice: cmds.fan_off }))
+        } else {
+            ws.send(JSON.stringify({ sendToDevice: cmds.fan_on }))
         }
     } else {
         const on = device[ctrl]
