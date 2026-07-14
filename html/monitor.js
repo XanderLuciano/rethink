@@ -24,6 +24,7 @@ let device = {
     swVer: '',
     fan: false,
     light: false,
+    lightLevel: null, // 'low' | 'high' | null
     rssi: null,
     lastSeen: null,
     packetCount: 0,
@@ -38,19 +39,23 @@ const ts = () => new Date().toLocaleTimeString()
 function parseState(hex) {
     const lower = hex.toLowerCase()
     if (hex.startsWith('aa62')) {
-        const fan = hex.length > 14 ? hex[14] === '3' && hex[15] === '1' : false
+        let state = {}
         const ffIdx = lower.lastIndexOf('ff030d')
-        let light = false
         if (ffIdx > 0) {
             const tail = lower.substring(ffIdx + 6)
             const c3Idx = tail.indexOf('c3')
             if (c3Idx >= 0) {
                 const blk = tail.substring(c3Idx)
                 const m = blk.match(/53([0-9a-f]{2})/)
-                if (m) light = parseInt(m[1], 16) === 0x10
+                if (m) {
+                    const val = parseInt(m[1], 16)
+                    state.fan = !!(val & 0x01)
+                    state.light = !!(val & 0x10) || !!(val & 0x20)
+                    state.lightLevel = val & 0x20 ? 'high' : val & 0x10 ? 'low' : null
+                }
             }
         }
-        return { fan, light }
+        return state
     }
     return {}
 }
@@ -97,8 +102,8 @@ function updateCards() {
             </div></div>
             <div class="col s6 m3"><div class="state-card">
                 <div class="card-header"><span class="material-icons">light_mode</span> Light</div>
-                <div class="card-value">${device.light ? 'ON' : 'OFF'}</div>
-                <div class="card-sub">${device.light ? 'Illuminated' : 'Dark'}</div>
+                <div class="card-value">${device.light ? (device.lightLevel === 'high' ? 'HIGH' : 'ON') : 'OFF'}</div>
+                <div class="card-sub">${device.light ? (device.lightLevel === 'high' ? 'Bright' : 'Dim') : 'Dark'}</div>
             </div></div>`
     } else {
         $('status_cards').innerHTML = `
@@ -127,7 +132,7 @@ function updateControls() {
         <div class="col s6 m3">
             <button class="toggle-btn ${device.light ? 'on' : 'off'} waves-effect"
                     id="btn_light" ${!online ? 'disabled' : ''}
-                    onclick="toggle('light')">Light: ${device.light ? 'ON' : 'OFF'}</button>
+                    onclick="toggle('light')">Light: ${device.light ? (device.lightLevel === 'high' ? 'HIGH' : 'LOW') : 'OFF'}</button>
         </div>`
 
     // Enable/disable send button
@@ -137,12 +142,25 @@ function updateControls() {
 function toggle(ctrl) {
     const cmds = DEVICE_CMDS[device.model]
     if (!cmds || !ws || ws.readyState !== WebSocket.OPEN) return
-    const on = device[ctrl]
-    const hex = cmds[ctrl + (on ? '_off' : '_on')]
-    if (!hex) return
-    ws.send(JSON.stringify({ sendToDevice: hex }))
-    device[ctrl] = !on
-    update()
+
+    if (ctrl === 'light') {
+        // Cycle: off → low → high → off
+        if (!device.light) {
+            // off → low: send light_on, device will respond with low
+            ws.send(JSON.stringify({ sendToDevice: cmds.light_on }))
+        } else if (device.lightLevel === 'low') {
+            // low → high: send light_on again, device cycles up
+            ws.send(JSON.stringify({ sendToDevice: cmds.light_on }))
+        } else {
+            // high → off
+            ws.send(JSON.stringify({ sendToDevice: cmds.light_off }))
+        }
+    } else {
+        const on = device[ctrl]
+        const hex = cmds[ctrl + (on ? '_off' : '_on')]
+        if (!hex) return
+        ws.send(JSON.stringify({ sendToDevice: hex }))
+    }
 }
 
 function sendCmd() {
