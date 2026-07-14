@@ -2,318 +2,170 @@
 <html>
     <head>
         <style>
-            * {
-                box-sizing: border-box;
-                margin: 0;
-                padding: 0;
-            }
-            body {
-                background: #1a1a2e;
-                color: #e0e0e0;
-                font-family: 'Segoe UI', system-ui, sans-serif;
-                min-height: 100vh;
-            }
-            nav {
-                background: #16213e;
-                padding: 12px 20px;
-                display: flex;
-                align-items: center;
-                gap: 12px;
-            }
-            nav a {
-                color: #e94560;
-                text-decoration: none;
-                font-weight: 600;
-            }
-            nav .brand {
-                font-size: 1.2em;
-                display: flex;
-                align-items: center;
-                gap: 8px;
-            }
-            .container {
-                max-width: 800px;
-                margin: 0 auto;
-                padding: 16px;
-            }
-            .device-header {
-                background: #16213e;
-                border-radius: 12px;
-                padding: 16px 20px;
-                margin-bottom: 16px;
-                display: flex;
-                justify-content: space-between;
-                align-items: center;
-                flex-wrap: wrap;
-                gap: 12px;
-            }
-            .device-header .name {
-                font-size: 1.3em;
-                font-weight: 700;
-                color: #fff;
-            }
-            .device-header .meta {
-                font-size: 0.85em;
-                color: #8899aa;
-            }
-            .status-dot {
-                display: inline-block;
-                width: 10px;
-                height: 10px;
-                border-radius: 50%;
-                margin-right: 6px;
-            }
-            .status-dot.online {
-                background: #4caf50;
-                box-shadow: 0 0 8px #4caf50;
-            }
-            .status-dot.offline {
-                background: #f44336;
-            }
-            .status-dot.connecting {
-                background: #ff9800;
-                animation: pulse 1s infinite;
-            }
-            @keyframes pulse {
-                0%,
-                100% {
-                    opacity: 1;
-                }
-                50% {
-                    opacity: 0.4;
-                }
-            }
-            .signal-bars {
-                font-size: 0.8em;
-                color: #8899aa;
-            }
-            .card-grid {
-                display: grid;
-                grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-                gap: 12px;
-                margin-bottom: 16px;
-            }
             .state-card {
-                background: #16213e;
-                border-radius: 10px;
-                padding: 16px;
-                text-align: center;
-            }
-            .state-card .icon {
-                font-size: 2em;
-                margin-bottom: 8px;
-            }
-            .state-card .label {
-                font-size: 0.8em;
-                color: #8899aa;
-                text-transform: uppercase;
-                letter-spacing: 1px;
-            }
-            .state-card .value {
-                font-size: 1.5em;
-                font-weight: 700;
-                color: #e94560;
+                border: 1px solid #e0e0e0;
+                border-radius: 8px;
+                padding: 12px 16px;
                 margin: 4px 0;
             }
-            .state-card .sub {
-                font-size: 0.8em;
-                color: #667788;
-            }
-            .controls-section {
-                background: #16213e;
-                border-radius: 12px;
-                padding: 16px 20px;
-                margin-bottom: 16px;
-            }
-            .controls-section h3 {
-                font-size: 1em;
-                color: #8899aa;
-                margin-bottom: 12px;
-                text-transform: uppercase;
-                letter-spacing: 1px;
-            }
-            .control-row {
-                display: flex;
-                align-items: center;
-                justify-content: space-between;
-                padding: 8px 0;
-                border-bottom: 1px solid #1a1a2e;
-            }
-            .control-row:last-child {
-                border-bottom: none;
-            }
-            .control-row .ctrl-label {
+            .state-card .card-header {
                 display: flex;
                 align-items: center;
                 gap: 8px;
+                font-weight: 600;
+                margin-bottom: 4px;
             }
-            .control-row .ctrl-label .material-icons {
-                color: #e94560;
+            .state-card .card-header .material-icons {
+                color: #0288d1;
             }
-            .control-row .ctrl-name {
-                font-weight: 500;
+            .state-card .card-value {
+                font-size: 1.5em;
+                font-weight: 700;
+                color: #e65100;
+            }
+            .state-card .card-sub {
+                font-size: 0.85em;
+                color: #888;
             }
             .toggle-btn {
-                padding: 6px 20px;
                 border: none;
-                border-radius: 20px;
-                cursor: pointer;
+                border-radius: 4px;
+                padding: 6px 18px;
                 font-weight: 600;
+                cursor: pointer;
                 font-size: 0.9em;
-                transition: all 0.2s;
-                min-width: 70px;
             }
             .toggle-btn.on {
                 background: #4caf50;
                 color: #fff;
             }
             .toggle-btn.off {
-                background: #333;
-                color: #8899aa;
+                background: #bdbdbd;
+                color: #555;
             }
             .toggle-btn:disabled {
                 opacity: 0.4;
                 cursor: not-allowed;
             }
-            .raw-section {
-                background: #16213e;
-                border-radius: 12px;
-                padding: 16px 20px;
-                margin-bottom: 16px;
-            }
-            .raw-section h3 {
-                font-size: 1em;
-                color: #8899aa;
-                margin-bottom: 8px;
-                text-transform: uppercase;
-                letter-spacing: 1px;
-                cursor: pointer;
+            .signal-row {
                 display: flex;
                 align-items: center;
                 gap: 8px;
+                padding: 2px 0;
+                font-size: 0.9em;
             }
-            .raw-section h3 .material-icons {
-                transition: transform 0.2s;
-                font-size: 1.2em;
-            }
-            .raw-section.collapsed .material-icons {
-                transform: rotate(-90deg);
+            .signal-row .material-icons {
+                font-size: 1.1em;
+                color: #0288d1;
             }
             .raw-log {
                 max-height: 300px;
                 overflow-y: auto;
                 font-family: 'Courier New', monospace;
                 font-size: 0.75em;
-                line-height: 1.5;
+                background: #f5f5f5;
+                border: 1px solid #ddd;
+                border-radius: 4px;
+                padding: 8px;
+                margin-top: 8px;
             }
             .raw-log .msg {
-                padding: 2px 4px;
                 margin: 1px 0;
-                border-radius: 3px;
                 word-break: break-all;
+                line-height: 1.4;
+                white-space: pre-wrap;
             }
             .raw-log .msg.rx {
-                background: rgba(76, 175, 80, 0.15);
-                border-left: 3px solid #4caf50;
+                color: #1565c0;
             }
             .raw-log .msg.tx {
-                background: rgba(233, 69, 96, 0.15);
-                border-left: 3px solid #e94560;
-            }
-            .raw-log .time {
-                color: #667788;
-                margin-right: 8px;
+                color: #c62828;
             }
             .raw-log .dir {
                 font-weight: 700;
+                margin-right: 6px;
+            }
+            .raw-log .time {
+                color: #999;
                 margin-right: 8px;
-            }
-            .raw-log .rx .dir {
-                color: #4caf50;
-            }
-            .raw-log .tx .dir {
-                color: #e94560;
-            }
-            .empty-state {
-                text-align: center;
-                padding: 40px;
-                color: #667788;
-            }
-            .empty-state .material-icons {
-                font-size: 3em;
-                display: block;
-                margin-bottom: 12px;
-            }
-            .badge {
-                display: inline-block;
-                padding: 2px 8px;
-                border-radius: 10px;
-                font-size: 0.75em;
-                font-weight: 600;
-            }
-            .badge.active {
-                background: rgba(76, 175, 80, 0.2);
-                color: #4caf50;
-            }
-            .badge.inactive {
-                background: rgba(158, 158, 158, 0.2);
-                color: #9e9e9e;
-            }
-            .btn-row {
-                display: flex;
-                gap: 8px;
-                margin-top: 12px;
-            }
-            .btn-row button {
-                padding: 6px 16px;
-                border: none;
-                border-radius: 6px;
-                cursor: pointer;
-                font-size: 0.85em;
-                font-weight: 600;
-            }
-            .btn-primary {
-                background: #e94560;
-                color: #fff;
-            }
-            .btn-primary:hover {
-                background: #c73a52;
             }
         </style>
         <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet" />
+        <link
+            rel="stylesheet"
+            href="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/css/materialize.min.css"
+        />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     </head>
     <body>
-        <nav>
-            <a href="/" class="brand"><span class="material-icons">psychology_alt</span> Rethink</a>
-            <span style="flex: 1"></span>
-            <span id="nav_status"></span>
+        <nav class="light-blue lighten-1" role="navigation">
+            <div class="nav-wrapper container">
+                <a href="/" class="brand-logo">
+                    <span class="material-icons">psychology_alt</span>
+                    Rethink monitor
+                </a>
+            </div>
         </nav>
 
         <div class="container">
-            <div class="device-header" id="device_header">
-                <div>
-                    <div class="name" id="dev_name">Loading...</div>
-                    <div class="meta"><span id="dev_model"></span> &middot; Type <span id="dev_type"></span></div>
+            <h4 class="header orange-text" id="dev_title">Device</h4>
+
+            <!-- Device info -->
+            <div class="row" id="info_row">
+                <div class="col s12 m6">
+                    <table>
+                        <tr>
+                            <td style="font-weight: 600; width: 7em">Model</td>
+                            <td id="info_model">...</td>
+                        </tr>
+                        <tr>
+                            <td style="font-weight: 600">Type</td>
+                            <td id="info_type">...</td>
+                        </tr>
+                        <tr>
+                            <td style="font-weight: 600">Status</td>
+                            <td id="info_status">...</td>
+                        </tr>
+                    </table>
                 </div>
-                <div style="text-align: right">
-                    <div id="dev_rssi" class="signal-bars"></div>
-                    <div id="dev_uptime" class="meta"></div>
+                <div class="col s12 m6">
+                    <table>
+                        <tr>
+                            <td style="font-weight: 600; width: 5em">RSSI</td>
+                            <td id="info_rssi">...</td>
+                        </tr>
+                        <tr>
+                            <td style="font-weight: 600">Packets</td>
+                            <td id="info_packets">0</td>
+                        </tr>
+                        <tr>
+                            <td style="font-weight: 600">Last seen</td>
+                            <td id="info_seen">...</td>
+                        </tr>
+                    </table>
                 </div>
             </div>
 
-            <div id="status_cards" class="card-grid"></div>
-            <div id="controls_panel"></div>
+            <!-- Status cards -->
+            <div class="row" id="status_cards"></div>
 
-            <div class="raw-section collapsed" id="raw_section">
-                <h3 onclick="toggleRaw()">
-                    <span class="material-icons">expand_more</span>
-                    Raw Packets <span id="raw_count" style="font-weight: 400; color: #667788"></span>
-                </h3>
-                <div class="raw-log" id="raw_log"></div>
+            <!-- Controls (microwave: fan/light) -->
+            <div id="controls_section" style="display: none">
+                <h5 class="header orange-text">Controls</h5>
+                <div class="row" id="controls_row"></div>
+            </div>
+
+            <!-- Raw packets -->
+            <h5 class="header orange-text">
+                Raw Packets
+                <span style="float: right; font-weight: 400; font-size: 0.8em; color: #888" id="raw_count">0</span>
+            </h5>
+            <div class="raw-log" id="raw_log">
+                <div style="color: #999; text-align: center; padding: 20px">Waiting for device data...</div>
             </div>
         </div>
 
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/js/materialize.min.js"></script>
         <script src="monitor.js"></script>
     </body>
 </html>

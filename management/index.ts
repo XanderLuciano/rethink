@@ -10,6 +10,7 @@ import { Bridge } from '@/bridge'
 import { Request, Response } from 'express'
 import { Device as T1Device } from '@/cloud/thinq1/device'
 import { Device as T2Device } from '@/cloud/thinq2/device'
+import { Metadata } from '@/cloud/thinq'
 
 export function app(ha: HA_bridge, manager: DeviceManager, bridge: Bridge | undefined) {
     const app = new WebSocketExpress()
@@ -151,7 +152,9 @@ export function app(ha: HA_bridge, manager: DeviceManager, bridge: Bridge | unde
         if (bridge) return { loggedIn: bridge.isLoggedIn() }
     }
 
-    // device monitoring
+    // device monitoring — cache meta so monitor works even when device is offline
+    const metaCache: Record<string, Metadata> = {}
+
     app.ws('/device', (req, res, next) => {
         const id = req.query?.id
         if (typeof id !== 'string') {
@@ -159,9 +162,20 @@ export function app(ha: HA_bridge, manager: DeviceManager, bridge: Bridge | unde
             return
         }
 
+        // Send cached meta immediately on connect
+        if (metaCache[id]) {
+            // will be sent after accept
+        }
+
         res.accept().then((ws) => {
             let injectFlag = false
             let device: AnyDevice | undefined
+
+            // Send cached meta first
+            if (metaCache[id]) {
+                ws.send(JSON.stringify({ meta: metaCache[id] }))
+            }
+
             const onDeviceRx = (arg: Buffer) => {
                 ws.send(
                     JSON.stringify({
@@ -180,6 +194,9 @@ export function app(ha: HA_bridge, manager: DeviceManager, bridge: Bridge | unde
             const checkDevicePresence = () => {
                 const dev = manager.allDevices[id]
 
+                // Cache meta when device is online
+                if (dev && dev.meta) metaCache[id] = dev.meta
+
                 if (dev !== device) {
                     device?.removeListener('data', onDeviceRx)
                     device?.removeListener('sendData', onDeviceTx)
@@ -190,7 +207,8 @@ export function app(ha: HA_bridge, manager: DeviceManager, bridge: Bridge | unde
                         device.on('data', onDeviceRx)
                         device.on('sendData', onDeviceTx)
                     } else {
-                        ws.send(JSON.stringify({ status: 'offline' }))
+                        // Send cached meta even when offline
+                        ws.send(JSON.stringify({ status: 'offline', meta: metaCache[id] }))
                     }
                 }
             }
