@@ -100,6 +100,23 @@ export class DeviceAcceptor extends TypedEmitter<DeviceAcceptorEvents> {
                 }
             }
 
+            // Auto-recover after server restart: device reconnects but
+            // deployMsg was lost with the old process. Reconstruct from
+            // the device_packet's own metadata.
+            if (payload.cmd === 'device_packet' && !client.deviceObj && !client.deployMsg && payload.kind) {
+                client.deployMsg = {
+                    mid: payload.mid,
+                    did: payload.did,
+                    kind: payload.kind,
+                    cmd: 'deploy' as const,
+                    rssi: payload.rssi,
+                    data: {} as any,
+                    type: 0,
+                }
+                this.completeProvisioning(payload.did, payload, client)
+                return
+            }
+
             if (payload.cmd === 'req_timesync' && client.deployMsg && payload.did === client.deployMsg.did) {
                 this.timeSyncRequest(client)
             }
