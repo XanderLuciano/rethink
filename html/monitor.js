@@ -1,8 +1,5 @@
 // ── Device monitor page ──────────────────────────────────────────────
 const DEVICE_ID = new URLSearchParams(window.location.search).get('id')
-const baseUrl = new URL(window.location)
-baseUrl.search = ''
-baseUrl.hash = ''
 
 const FRIENDLY = {
     WMVEL2137: 'Microwave / Hood',
@@ -166,7 +163,8 @@ function pushRaw(dir, hex) {
 // ── WebSocket ────────────────────────────────────────────────────────
 function connect() {
     clearTimeout(reconnectTimer)
-    ws = new WebSocket(baseUrl + `device?id=${DEVICE_ID}`)
+    const wsProto = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
+    ws = new WebSocket(`${wsProto}//${window.location.host}/device?id=${DEVICE_ID}`)
 
     ws.onclose = () => {
         device.status = 'offline'
