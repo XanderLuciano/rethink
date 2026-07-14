@@ -2,137 +2,318 @@
 <html>
     <head>
         <style>
-            .status_label {
-                width: 10em;
-                display: inline-block;
-            }
-            .flex_x {
-                display: flex;
-                flex-direction: row;
-                align-items: center;
-            }
-            .flex_y {
-                display: flex;
-                flex-direction: column;
-            }
-            .flex_grow {
-                flex: 1;
-            }
-            #messages {
-                border: solid 1px black;
-                border-radius: 8px;
-                padding: 8px;
-                overflow-y: scroll;
-                margin-bottom: 8px;
+            * {
+                box-sizing: border-box;
+                margin: 0;
+                padding: 0;
             }
             body {
-                height: 100vh;
+                background: #1a1a2e;
+                color: #e0e0e0;
+                font-family: 'Segoe UI', system-ui, sans-serif;
+                min-height: 100vh;
             }
-
-            .message {
-                clear: both;
-                border: solid 1px black;
-                border-radius: 4px;
+            nav {
+                background: #16213e;
+                padding: 12px 20px;
+                display: flex;
+                align-items: center;
+                gap: 12px;
+            }
+            nav a {
+                color: #e94560;
+                text-decoration: none;
+                font-weight: 600;
+            }
+            nav .brand {
+                font-size: 1.2em;
+                display: flex;
+                align-items: center;
+                gap: 8px;
+            }
+            .container {
+                max-width: 800px;
+                margin: 0 auto;
+                padding: 16px;
+            }
+            .device-header {
+                background: #16213e;
+                border-radius: 12px;
+                padding: 16px 20px;
+                margin-bottom: 16px;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                flex-wrap: wrap;
+                gap: 12px;
+            }
+            .device-header .name {
+                font-size: 1.3em;
+                font-weight: 700;
+                color: #fff;
+            }
+            .device-header .meta {
+                font-size: 0.85em;
+                color: #8899aa;
+            }
+            .status-dot {
+                display: inline-block;
+                width: 10px;
+                height: 10px;
+                border-radius: 50%;
+                margin-right: 6px;
+            }
+            .status-dot.online {
+                background: #4caf50;
+                box-shadow: 0 0 8px #4caf50;
+            }
+            .status-dot.offline {
+                background: #f44336;
+            }
+            .status-dot.connecting {
+                background: #ff9800;
+                animation: pulse 1s infinite;
+            }
+            @keyframes pulse {
+                0%,
+                100% {
+                    opacity: 1;
+                }
+                50% {
+                    opacity: 0.4;
+                }
+            }
+            .signal-bars {
+                font-size: 0.8em;
+                color: #8899aa;
+            }
+            .card-grid {
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+                gap: 12px;
+                margin-bottom: 16px;
+            }
+            .state-card {
+                background: #16213e;
+                border-radius: 10px;
+                padding: 16px;
+                text-align: center;
+            }
+            .state-card .icon {
+                font-size: 2em;
+                margin-bottom: 8px;
+            }
+            .state-card .label {
+                font-size: 0.8em;
+                color: #8899aa;
+                text-transform: uppercase;
+                letter-spacing: 1px;
+            }
+            .state-card .value {
+                font-size: 1.5em;
+                font-weight: 700;
+                color: #e94560;
+                margin: 4px 0;
+            }
+            .state-card .sub {
+                font-size: 0.8em;
+                color: #667788;
+            }
+            .controls-section {
+                background: #16213e;
+                border-radius: 12px;
+                padding: 16px 20px;
+                margin-bottom: 16px;
+            }
+            .controls-section h3 {
+                font-size: 1em;
+                color: #8899aa;
+                margin-bottom: 12px;
+                text-transform: uppercase;
+                letter-spacing: 1px;
+            }
+            .control-row {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                padding: 8px 0;
+                border-bottom: 1px solid #1a1a2e;
+            }
+            .control-row:last-child {
+                border-bottom: none;
+            }
+            .control-row .ctrl-label {
+                display: flex;
+                align-items: center;
+                gap: 8px;
+            }
+            .control-row .ctrl-label .material-icons {
+                color: #e94560;
+            }
+            .control-row .ctrl-name {
+                font-weight: 500;
+            }
+            .toggle-btn {
+                padding: 6px 20px;
+                border: none;
+                border-radius: 20px;
+                cursor: pointer;
+                font-weight: 600;
+                font-size: 0.9em;
+                transition: all 0.2s;
+                min-width: 70px;
+            }
+            .toggle-btn.on {
+                background: #4caf50;
+                color: #fff;
+            }
+            .toggle-btn.off {
+                background: #333;
+                color: #8899aa;
+            }
+            .toggle-btn:disabled {
+                opacity: 0.4;
+                cursor: not-allowed;
+            }
+            .raw-section {
+                background: #16213e;
+                border-radius: 12px;
+                padding: 16px 20px;
+                margin-bottom: 16px;
+            }
+            .raw-section h3 {
+                font-size: 1em;
+                color: #8899aa;
+                margin-bottom: 8px;
+                text-transform: uppercase;
+                letter-spacing: 1px;
+                cursor: pointer;
+                display: flex;
+                align-items: center;
+                gap: 8px;
+            }
+            .raw-section h3 .material-icons {
+                transition: transform 0.2s;
+                font-size: 1.2em;
+            }
+            .raw-section.collapsed .material-icons {
+                transform: rotate(-90deg);
+            }
+            .raw-log {
+                max-height: 300px;
+                overflow-y: auto;
+                font-family: 'Courier New', monospace;
+                font-size: 0.75em;
+                line-height: 1.5;
+            }
+            .raw-log .msg {
                 padding: 2px 4px;
-                margin: 2px;
-                word-wrap: anywhere;
+                margin: 1px 0;
+                border-radius: 3px;
+                word-break: break-all;
             }
-
-            .tx.message {
-                float: right;
-                background: rgb(117, 42, 119);
-                color: white;
+            .raw-log .msg.rx {
+                background: rgba(76, 175, 80, 0.15);
+                border-left: 3px solid #4caf50;
             }
-            .rx.message {
-                float: left;
-                background: rgb(116, 171, 203);
+            .raw-log .msg.tx {
+                background: rgba(233, 69, 96, 0.15);
+                border-left: 3px solid #e94560;
             }
-
-            .message.injected {
-                background: #c04040;
+            .raw-log .time {
+                color: #667788;
+                margin-right: 8px;
             }
-
-            .message .timestamp {
-                background: #ffff80;
-                color: black;
-                margin: 0px 8px;
-                padding: 0px 4px;
+            .raw-log .dir {
+                font-weight: 700;
+                margin-right: 8px;
             }
-            .rx.message .timestamp {
-                float: left;
+            .raw-log .rx .dir {
+                color: #4caf50;
             }
-            .tx.message .timestamp {
-                float: right;
+            .raw-log .tx .dir {
+                color: #e94560;
             }
-
-            .reduced_margins .input-field {
-                margin: 4px;
+            .empty-state {
+                text-align: center;
+                padding: 40px;
+                color: #667788;
+            }
+            .empty-state .material-icons {
+                font-size: 3em;
+                display: block;
+                margin-bottom: 12px;
+            }
+            .badge {
+                display: inline-block;
+                padding: 2px 8px;
+                border-radius: 10px;
+                font-size: 0.75em;
+                font-weight: 600;
+            }
+            .badge.active {
+                background: rgba(76, 175, 80, 0.2);
+                color: #4caf50;
+            }
+            .badge.inactive {
+                background: rgba(158, 158, 158, 0.2);
+                color: #9e9e9e;
+            }
+            .btn-row {
+                display: flex;
+                gap: 8px;
+                margin-top: 12px;
+            }
+            .btn-row button {
+                padding: 6px 16px;
+                border: none;
+                border-radius: 6px;
+                cursor: pointer;
+                font-size: 0.85em;
+                font-weight: 600;
+            }
+            .btn-primary {
+                background: #e94560;
+                color: #fff;
+            }
+            .btn-primary:hover {
+                background: #c73a52;
             }
         </style>
         <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet" />
-        <link
-            rel="stylesheet"
-            href="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/css/materialize.min.css"
-        />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     </head>
-
-    <body class="flex_y">
-        <nav class="light-blue lighten-1" role="navigation">
-            <div class="nav-wrapper container">
-                <a id="logo-container" href="/" class="brand-logo">
-                    <span class="material-icons">psychology_alt</span>
-                    Rethink management panel
-                </a>
-            </div>
+    <body>
+        <nav>
+            <a href="/" class="brand"><span class="material-icons">psychology_alt</span> Rethink</a>
+            <span style="flex: 1"></span>
+            <span id="nav_status"></span>
         </nav>
+
         <div class="container">
-            <h4 class="header orange-text">Device status</h4>
-            <span class="status_label">Device ID:</span> <span id="device_id" class="status_value"></span> <br />
-            <span class="status_label">Device model:</span> <span id="device_model" class="status_value"></span> <br />
-            <span class="status_label">Status:</span> <span id="device_status" class="status_value"></span> <br />
-        </div>
-
-        <div class="reduced_margins container flex_y flex_grow" style="overflow: hidden">
-            <h4 class="header orange-text">
-                Messages
-                <div style="float: right">
-                    <label for="autoscroll">Auto-scroll</label>
-                    <span class="switch">
-                        <label
-                            >Off <input id="autoscroll" type="checkbox" checked /> <span class="lever"></span>On</label
-                        >
-                    </span>
+            <div class="device-header" id="device_header">
+                <div>
+                    <div class="name" id="dev_name">Loading...</div>
+                    <div class="meta"><span id="dev_model"></span> &middot; Type <span id="dev_type"></span></div>
                 </div>
-            </h4>
-            <div class="flex_grow" id="messages"></div>
-            <div class="flex_x">
-                <div class="input-field flex_grow">
-                    <input id="send1" type="text" />
-                    <label for="send1">Send to device</label>
-                </div>
-                &nbsp;
-                <div class="input-field">
-                    <button disabled class="btn waves-effect waves-light" id="btn_send1">
-                        Send <i class="material-icons right">send</i>
-                    </button>
+                <div style="text-align: right">
+                    <div id="dev_rssi" class="signal-bars"></div>
+                    <div id="dev_uptime" class="meta"></div>
                 </div>
             </div>
-            <div class="flex_x">
-                <div class="input-field">
-                    <button disabled class="btn waves-effect waves-light" id="btn_send2">
-                        Send <i class="material-icons left">send</i>
-                    </button>
-                </div>
-                &nbsp;
-                <div class="input-field flex_grow">
-                    <input id="send2" type="text" />
-                    <label for="send2">Inject from device</label>
-                </div>
+
+            <div id="status_cards" class="card-grid"></div>
+            <div id="controls_panel"></div>
+
+            <div class="raw-section collapsed" id="raw_section">
+                <h3 onclick="toggleRaw()">
+                    <span class="material-icons">expand_more</span>
+                    Raw Packets <span id="raw_count" style="font-weight: 400; color: #667788"></span>
+                </h3>
+                <div class="raw-log" id="raw_log"></div>
             </div>
         </div>
 
-        <script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/js/materialize.min.js"></script>
         <script src="monitor.js"></script>
     </body>
 </html>

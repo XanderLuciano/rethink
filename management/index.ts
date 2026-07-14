@@ -163,7 +163,13 @@ export function app(ha: HA_bridge, manager: DeviceManager, bridge: Bridge | unde
             let injectFlag = false
             let device: AnyDevice | undefined
             const onDeviceRx = (arg: Buffer) => {
-                ws.send(JSON.stringify({ rx: arg.toString('hex'), injected: injectFlag }))
+                ws.send(
+                    JSON.stringify({
+                        rx: arg.toString('hex'),
+                        rssi: (device as any).rssi,
+                        injected: injectFlag,
+                    }),
+                )
             }
 
             const onDeviceTx = (arg: Buffer | object) => {

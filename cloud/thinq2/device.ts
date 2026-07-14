@@ -18,6 +18,8 @@ type DeviceEvents = {
 export class Device extends TypedEmitter<DeviceEvents> {
     // this could be a stream but why bother...
     readonly platform = 'thinq2'
+    rssi?: number
+    fs?: string
 
     constructor(
         readonly broker: Broker,
@@ -92,6 +94,8 @@ export class DeviceAcceptor extends TypedEmitter<DeviceAcceptorEvents> {
             if (payload.cmd === 'device_packet' && payload.did === client.deployMsg?.did) {
                 if (client.deviceObj) {
                     const buf = Buffer.from(payload.data as string, 'hex')
+                    client.deviceObj.rssi = payload.rssi
+                    client.deviceObj.fs = payload.fs
                     client.deviceObj.emit('data', buf)
                 }
             }
