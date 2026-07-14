@@ -154,6 +154,15 @@ export function app(ha: HA_bridge, manager: DeviceManager, bridge: Bridge | unde
 
     // device monitoring — cache meta so monitor works even when device is offline
     const metaCache: Record<string, Metadata> = {}
+    // Ring buffer of recent packets per device, sent on connect for instant history
+    const packetBuffer: Record<string, { dir: string; hex: string }[]> = {}
+    const MAX_BUFFER = 50
+
+    function bufferPacket(id: string, dir: string, hex: string) {
+        if (!packetBuffer[id]) packetBuffer[id] = []
+        packetBuffer[id].push({ dir, hex })
+        if (packetBuffer[id].length > MAX_BUFFER) packetBuffer[id].shift()
+    }
 
     app.ws('/device', (req, res, next) => {
         const id = req.query?.id
@@ -176,10 +185,20 @@ export function app(ha: HA_bridge, manager: DeviceManager, bridge: Bridge | unde
                 ws.send(JSON.stringify({ meta: metaCache[id] }))
             }
 
+            // Send buffered packet history for instant hydration
+            const buffered = packetBuffer[id]
+            if (buffered) {
+                for (const pkt of buffered) {
+                    ws.send(JSON.stringify({ [pkt.dir]: pkt.hex }))
+                }
+            }
+
             const onDeviceRx = (arg: Buffer) => {
+                const hex = arg.toString('hex')
+                bufferPacket(id, 'rx', hex)
                 ws.send(
                     JSON.stringify({
-                        rx: arg.toString('hex'),
+                        rx: hex,
                         rssi: (device as any).rssi,
                         injected: injectFlag,
                     }),
@@ -187,6 +206,8 @@ export function app(ha: HA_bridge, manager: DeviceManager, bridge: Bridge | unde
             }
 
             const onDeviceTx = (arg: Buffer | object) => {
+                const hex = Buffer.isBuffer(arg) ? arg.toString('hex') : JSON.stringify(arg)
+                bufferPacket(id, 'tx', Buffer.isBuffer(arg) ? hex : JSON.stringify(arg))
                 if (Buffer.isBuffer(arg)) ws.send(JSON.stringify({ tx: arg.toString('hex'), injected: injectFlag }))
                 else ws.send(JSON.stringify({ tx: JSON.stringify(arg), injected: injectFlag }))
             }
